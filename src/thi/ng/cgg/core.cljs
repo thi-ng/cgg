@@ -53,11 +53,22 @@
     (swap! app assoc-in [:coeffs id idx] (-> e .-target .-value f/parse-float))
     (update-viz!)))
 
+(defn set-preset!
+  [id]
+  (swap! app assoc :coeffs (grad/cosine-schemes id))
+  (update-viz!))
+
 (defn slider
   [props]
   [:p
    [:input (merge {:type :range :min (- m/PI) :max m/PI :step 0.01} props)]
    [:input (merge {:type :number :step 0.01} props)]])
+
+(defn preset-chooser
+  []
+  [:select {:on-change #(-> % .-target .-value keyword set-preset!)}
+   (for [[k v] grad/cosine-schemes :let [id (name k)]]
+     [:option {:key id :value id} id])])
 
 (defn gradient-graph
   []
@@ -95,6 +106,7 @@
   []
   (let [coeffs (reaction (:coeffs @app))]
     [:div
+     [preset-chooser]
      [gradient-graph]
      [gradient-controls]
      [:p "Vector of coefficients for the above shown gradient:" [:br]
