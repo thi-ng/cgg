@@ -25,9 +25,7 @@
               :grid   {:minor-x true
                        :minor-y true}}}))
 
-(def fmt-vec
-  (let [ff (f/float 3)]
-    #(apply f/format ["[" ff " " ff " " ff "]"] %)))
+(def fmt-vec (let [ff (f/float 3)] #(apply f/format ["[" ff " " ff " " ff "]"] %)))
 
 (defn channel-specs
   [colors]
@@ -45,6 +43,12 @@
     (for [i (m/norm-range n)]
       (svg/rect [(m/mix* x1 x2 i) y] w h {:fill (nth colors (int (* i n)))}))))
 
+(defn clear-preset!
+  [] (swap! app assoc :preset :user))
+
+(defn backup-coeffs!
+  [] (swap! app assoc :coeffs-orig (:coeffs @app)))
+
 (defn update-viz!
   []
   (let [grad (grad/cosine-gradient 100 (:coeffs @app))]
@@ -54,34 +58,33 @@
 (defn update-coeff!
   [id idx]
   (fn [e]
-    (swap! app assoc :preset :user)
     (swap! app assoc-in [:coeffs id idx] (-> e .-target .-value f/parse-float))
-    (swap! app assoc :coeffs-orig (:coeffs @app))
+    (backup-coeffs!)
+    (clear-preset!)
     (update-viz!)))
 
 (defn update-global!
   [id f]
   (fn [e]
     (let [x (-> e .-target .-value f/parse-float)]
-      (swap! app assoc :preset :user)
       (swap! app assoc-in [:globals id] x)
       (swap! app assoc-in [:coeffs id] (mapv #(f % x) (get-in @app [:coeffs-orig id])))
+      (clear-preset!)
       (update-viz!))))
 
 (defn set-preset!
   [id]
   (swap! app assoc :preset id :coeffs (grad/cosine-schemes id) :globals [0 1 1 0])
-  (swap! app assoc :coeffs-orig (:coeffs @app))
+  (backup-coeffs!)
   (update-viz!))
 
 (defn randomize-coeffs!
   []
-  (swap! app assoc :preset :user)
   (swap! app assoc :coeffs
-         (mapv
-          (fn [i] (vec (repeatedly 3 #(apply m/random (get-in @app [:ranges i])))))
-          (range 4)))
-  (swap! app assoc :coeffs-orig (:coeffs @app))
+         (mapv (fn [i] (vec (repeatedly 3 #(apply m/random (get-in @app [:ranges i])))))
+               (range 4)))
+  (backup-coeffs!)
+  (clear-preset!)
   (update-viz!))
 
 (defn slider
@@ -103,12 +106,11 @@
   []
   (let [colors (reaction (:gradient @app))
         spec   (reaction (:viz @app))]
-    (fn []
-      (let [body (viz/svg-plot2d-cartesian @spec)
-            bars (color-bars 50 570 280 10 20 @colors)]
-        [:div#viz
-         (svgadapt/inject-element-attribs
-          (svg/svg {:width 650 :height 300} body bars))]))))
+    #(let [body (viz/svg-plot2d-cartesian @spec)
+           bars (color-bars 50 570 280 10 20 @colors)]
+       [:div#viz
+        (svgadapt/inject-element-attribs
+         (svg/svg {:width 650 :height 300} body bars))])))
 
 (defn channel-controls
   [id [r g b]]
@@ -119,7 +121,7 @@
 
 (defn global-controls
   [id params f min max]
-  [slider {:value (params id) :min min :max max :on-change (update-global! id f)}])
+  [slider {:value (nth params id) :min min :max max :on-change (update-global! id f)}])
 
 (defn gradient-controls
   []
@@ -140,8 +142,7 @@
           [:td [global-controls 0 @globals + -1 1]]
           [:td [global-controls 1 @globals * 0 2]]
           [:td [global-controls 2 @globals * 0 2]]
-          [:td [global-controls 3 @globals + (- PI) PI]]
-          ]]]])))
+          [:td [global-controls 3 @globals + (- PI) PI]]]]]])))
 
 (defn app-component
   []
@@ -154,13 +155,9 @@
           [:button {:on-click randomize-coeffs!} "Randomize"]]
          [gradient-graph]
          [gradient-controls]
-         [:p "Vector of coefficients for the above shown gradient:" [:br]
-          [:pre "[" coeffs' "]"]]
+         [:p "Vector of coefficients for the above shown gradient:" [:br] [:pre "[" coeffs' "]"]]
          [:p "To sample the gradient and produce a seq of N RGBA colors:"
-          [:pre "(require '[thi.ng.color.gradients :as grad])
-
-(grad/cosine-gradient
-  100 [" coeffs' "]))"]]]))))
+          [:pre "(require '[thi.ng.color.gradients :as grad])\n\n(grad/cosine-gradient\n  100 [" coeffs' "]))"]]]))))
 
 (defn main
   []
