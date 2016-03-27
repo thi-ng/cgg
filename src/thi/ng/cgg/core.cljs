@@ -9,21 +9,32 @@
    [thi.ng.strf.core :as f]
    [thi.ng.math.core :as m :refer [PI TWO_PI HALF_PI]]
    [thi.ng.geom.core :as g]
+   [thi.ng.geom.vector :refer [vec2]]
    [thi.ng.geom.svg.core :as svg]
    [thi.ng.geom.svg.adapter :as svgadapt]
    [thi.ng.geom.viz.core :as viz]))
 
 (defonce app
   (r/atom
-   {:ranges  [[0 1] [0 1] [0 HALF_PI] [0 TWO_PI]]
-    :globals [0 1 1 0]
-    :viz     {:x-axis (viz/linear-axis
-                       {:domain [0 1] :range [50 580] :major 0.5 :minor 0.125 :pos 250})
-              :y-axis (viz/linear-axis
-                       {:domain [0 1] :range [250 20] :major 0.2 :minor 0.1 :pos 50
-                        :label-dist 15 :label-style {:text-anchor "end"}})
-              :grid   {:minor-x true
-                       :minor-y true}}}))
+   {:ranges    [[0 1] [0 1] [0 HALF_PI] [0 TWO_PI]]
+    :globals   [0 1 1 0]
+    :mode      :viz-cart
+    :viz-cart  {:x-axis (viz/linear-axis
+                         {:domain [0 1] :range [50 580] :major 0.5 :minor 0.125 :pos 250})
+                :y-axis (viz/linear-axis
+                         {:domain [0 1] :range [250 20] :major 0.2 :minor 0.1 :pos 50
+                          :label-dist 15 :label-style {:text-anchor "end"}})
+                :grid   {:minor-x true :minor-y true}}
+    :viz-polar {:x-axis (viz/linear-axis
+                         {:domain [0 0.9999] :range [0 TWO_PI]
+                          :major 0.5 :minor 0.0625
+                          :pos 130})
+                :y-axis (viz/linear-axis
+                         {:domain [0 1] :range [0 130] :major 0.2 :minor 0.1 :pos 0
+                          :label-dist 15 :label-style {:text-anchor "end"}})
+                :origin (vec2 325 130)
+                :circle true
+                :grid   {:minor-x true :minor-y true}}}))
 
 (def fmt-vec (let [ff (f/float 3)] #(apply f/format ["[" ff " " ff " " ff "]"] %)))
 
@@ -53,7 +64,7 @@
   []
   (let [grad (grad/cosine-gradient 100 (:coeffs @app))]
     (swap! app assoc :gradient grad)
-    (swap! app assoc-in [:viz :data] (channel-specs grad))))
+    (swap! app assoc :viz-data (channel-specs grad))))
 
 (defn update-coeff!
   [id idx]
@@ -77,6 +88,9 @@
   (swap! app assoc :preset id :coeffs (grad/cosine-schemes id) :globals [0 1 1 0])
   (backup-coeffs!)
   (update-viz!))
+
+(defn set-mode!
+  [id] (swap! app assoc :mode id))
 
 (defn randomize-coeffs!
   []
@@ -102,12 +116,23 @@
                 :value @sel}
        (for [id presets] [:option {:key id :value id} id])])))
 
+(defn mode-chooser
+  []
+  (let [mode (reaction (:mode @app))]
+    (fn []
+      [:select {:on-change #(->> % .-target .-value keyword set-mode!)
+                :value @mode}
+       [:option {:value "viz-cart"} "Cartesian"]
+       [:option {:value "viz-polar"} "Polar"]])))
+
 (defn gradient-graph
   []
   (let [colors (reaction (:gradient @app))
-        spec   (reaction (:viz @app))]
-    #(let [body (viz/svg-plot2d-cartesian @spec)
-           bars (color-bars 50 570 280 10 20 @colors)]
+        data   (reaction (:viz-data @app))
+        mode   (reaction (:mode @app))]
+    #(let [layout (if (= :viz-cart @mode) viz/svg-plot2d-cartesian viz/svg-plot2d-polar)
+           body   (layout (assoc (get @app @mode) :data @data))
+           bars   (color-bars 50 570 280 10 20 @colors)]
        [:div#viz
         (svgadapt/inject-element-attribs
          (svg/svg {:width 650 :height 300} body bars))])))
@@ -152,6 +177,7 @@
         [:div
          [:div
           [preset-chooser]
+          [mode-chooser]
           [:button {:on-click randomize-coeffs!} "Randomize"]]
          [gradient-graph]
          [gradient-controls]
