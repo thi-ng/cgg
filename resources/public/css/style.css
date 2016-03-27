@@ -1,0 +1,27 @@
+body {
+    font-family: Lekton,Inconsolata,Menlo,monospace;
+    width: 760px;
+    margin: auto;
+}
+#viz {
+    margin: 2em 0;
+    text-align: center;
+}
+table {
+    width: 100%;
+}
+th {
+    border-bottom: 1px solid #333;
+}
+pre {
+    border: 1px solid #333;
+    padding: 5px;
+    background: #ddd;
+    font-weight: bold;
+}
+input[type="number"] {
+    width: 4em;
+}
+a:link, a:visited {
+  color: #0cf;
+}
