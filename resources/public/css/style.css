@@ -22,6 +22,9 @@ pre {
 input[type="number"] {
     width: 4em;
 }
+button {
+    margin-left: 1em;
+}
 a:link, a:visited {
   color: #0cf;
 }
