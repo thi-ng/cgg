@@ -21,6 +21,10 @@
                                        :label-dist 15 :label-style {:text-anchor "end"}})
              :grid   {:minor-y true}}}))
 
+(def fmt-vec
+  (let [ff (f/float 3)]
+    #(apply f/format ["[" ff " " ff " " ff "]"] %)))
+
 (defn channel-specs
   [colors]
   (->> ["red" "green" "blue"]
@@ -94,7 +98,7 @@
      [gradient-graph]
      [gradient-controls]
      [:p "Vector of coefficients for the above shown gradient:" [:br]
-      [:pre (pr-str @coeffs)]]]))
+      [:pre (apply str (concat "[" (interpose " " (map fmt-vec @coeffs)) "]"))]]]))
 
 (defn main
   []
