@@ -26,13 +26,17 @@
                           :label-dist 15 :label-style {:text-anchor "end"}})
                 :grid   {:minor-x true :minor-y true}}
     :viz-polar {:x-axis (viz/linear-axis
-                         {:domain [0 0.9999] :range [0 TWO_PI]
+                         {:domain [0 1] :range [0 TWO_PI]
                           :major 0.5 :minor 0.0625
-                          :pos 130})
+                          :pos 133
+                          :label (constantly nil)})
                 :y-axis (viz/linear-axis
-                         {:domain [0 1] :range [0 130] :major 0.2 :minor 0.1 :pos 0
-                          :label-dist 15 :label-style {:text-anchor "end"}})
-                :origin (vec2 325 130)
+                         {:domain [0 1] :range [0 130]
+                          :major 0.5 :minor 0.25
+                          :major-size 8 :minor-size 4
+                          :pos 0
+                          :label-dist 12 :label-style {:text-anchor "end"}})
+                :origin (vec2 325 136)
                 :circle true
                 :grid   {:minor-x true :minor-y true}}}))
 
